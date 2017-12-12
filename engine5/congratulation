@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<!--
+Name: Rachel Higgins
+Class: CS 4183 Video Game Design
+Semester: Fall 2017
+Professor: David Cline
+Assignment: Sprint 2
+Goal: Find the four matching pairs to win.
+Credits:
+		Music: from https://www.bensound.com/royalty-free-music/track/memories by Bensound Royalty-free music.
+ -->
+
+<!-- HTML HEAD ELEMENT - DEFINES CSS FOR THE PAGE -->
+<head>
+	<meta charset="utf-8">
+    <style>
+	    body { background-color: #002200; }
+	    h3,p { color: #FFFF00; }
+	    canvas { background-color: #000044; }
+	    #debugContainer { color: #FFFFFF; position: absolute; z-index: 100;}
+    </style>
+    <title>Puzzle Game</title>
+</head>
+
+<!-- ==================================================================== -->
+
+<!-- HTML BODY TAG - DEFINES THE HTML LAYOUT FOR THE PAGE -->
+<body oncontextmenu="return false;">
+
+<!-- INCLUDE SCRIPTS -->
+<script src="../threejs/build/three.js"></script>
+<script src="../threejs/examples/js/loaders/OBJLoader.js"></script>
+<script src="../Physijs-master/physi.js"></script>
+<script src="../Physijs-master/physijs_worker.js"></script>
+<!--<script src="..\threejs\examples\textures"></script> -->
+<script src="gameEngine5.js"></script>
+
+<!-- GAME SPECIFIC INCLUDES -->
+<script src="stage2Data.js"></script>
+
+<!-- DEFINE LEFT DIV TAG - FOR DEBUG PRINTOUTS -->
+<div id="debugContainer">
+<pre id="debug"></pre>
+</div>
+
+<!-- MAKE CANVAS AND OTHER STARTING ELEMENTS  -->
+<center>
+	<br/>
+	<h3 id="scoreboard">Use the arrow buttons to move and jump. Push down arrow before jumping to jump straight up.
+	Push either left or right arrow to jump in the respective direction.  You can boost your jump
+	more by holding/clicking the arrows. Use the spacebar to shoot.</h3>
+	<h3 id="healthboard">Health: 5, Boss Health: 3</h3>
+	<canvas id="canvas" width="800" height="500"></canvas>
+	<audio id="music"><source src="memories.mp3"></source></audio>
+</center>
+
+
+<script>
+//----------------------------------------------------------------------//
+// VARIABLES
+//---------------------------------------------------------------------
+	//
+	var count = 0;
+	//Keeps count of the number of pairs found.
+	var success = 0;
+	var applyGravity = false;
+	var character;
+	var camera;
+	var ground;
+	var charDirection;
+	var charInAir = true;
+	var charJump = false;
+	var attack;
+	var defending = false;
+	var damageCounter = 5;
+	var invulnerability = false;
+	var enemy;
+	var shot;
+	var enemyHealth = 3;
+	var attacking = false;
+	var timer1;
+	var timer2;
+	var timer3;
+	var timer4;
+	
+//----------------------------------------------------------------------//
+// WIN/LOSE CODE
+//----------------------------------------------------------------------//
+	
+	//Called upon winning the game.  Removes abilty to click and reloads.
+	var replay = function()
+    {
+		window.location.href = "http:../engine5/stage1.html";
+    }
+	
+//----------------------------------------------------------------------//
+// THE LOADING AND ANIMATION CODE FOR THE GAME
+//----------------------------------------------------------------------//
+
+	//Run as soon as the screen loads to start game.
+	window.onload = function()
+	{
+		// Point Physijs to the multithreading and core physics engine 
+		Physijs.scripts.worker = '../Physijs-master/physijs_worker.js';
+		Physijs.scripts.ammo = '../Physijs-master/ammo.js';
+		// Start engine in full screen mode (really just full browswer)
+		engine.DEBUG = false;
+		//Sets the canvas and controls for the game and starts music.
+		canvas = document.getElementById("canvas");
+		initEngine(canvas);
+		parseScene(objects);
+		
+		var audio = new THREE.AudioListener();
+		camera.add(audio);
+		var s = new THREE.PositionalAudio(audio);
+		var loadSound = new THREE.AudioLoader();
+		loadSound.load('bensound-scifi.mp3', function(buffer)
+		{
+			s.setBuffer(buffer);
+			s.setLoop(4);
+			s.setRolloffFactor(4);
+			s.play();
+		});
+		
+		character.add(s);
+	}
+	
+</script>
+
+</body>
+</html>

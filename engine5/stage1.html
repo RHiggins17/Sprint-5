@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<!--
+Name: Rachel Higgins
+Class: CS 4183 Video Game Design
+Semester: Fall 2017
+Professor: David Cline
+Assignment: Sprint 5
+Goal: Find the four matching pairs to win.
+Credits:
+		Music: from https://www.bensound.com/royalty-free-music/track/summer by Bensound Royalty-free music.
+		Sound Effects:
+			-fire from http://soundbible.com/1902-Fire-Burning.html by JaBa
+			-water from http://soundbible.com/2032-Water.html by Lisa Redfern
+			-shot from fromhttp://soundbible.com/2004-Gun-Shot.html by Marvin
+			-whack from http://soundbible.com/1952-Punch-Or-Whack.html by Vladimir
+			-jump from http://soundbible.com/1898-Spin-Jump.html by Brandino480
+			-win from http://soundbible.com/1823-Winning-Triumphal-Fanfare.html by John Stracke
+			-lose from http://soundbible.com/1761-Glass-Breaking.html by Mike Koenig
+			
+ -->
+
+<!-- HTML HEAD ELEMENT - DEFINES CSS FOR THE PAGE -->
+<head>
+	<meta charset="utf-8">
+    <style>
+	    body { background-color: #002200; }
+	    h3,p { color: #FFFF00; }
+	    canvas { background-color: #000044; }
+	    #debugContainer { color: #FFFFFF; position: absolute; z-index: 100;}
+    </style>
+    <title>Platformer Cubey</title>
+</head>
+
+<!-- ==================================================================== -->
+
+<!-- HTML BODY TAG - DEFINES THE HTML LAYOUT FOR THE PAGE -->
+<body oncontextmenu="return false;">
+
+<!-- INCLUDE SCRIPTS -->
+<script src="../threejs/build/three.js"></script>
+<script src="../threejs/examples/js/loaders/OBJLoader.js"></script>
+<script src="../Physijs-master/physi.js"></script>
+<script src="../Physijs-master/physijs_worker.js"></script>
+<script src="gameEngine5.js"></script>
+
+<!-- GAME SPECIFIC INCLUDES -->
+<script src="stage1Data.js"></script>
+
+<!-- DEFINE LEFT DIV TAG - FOR DEBUG PRINTOUTS -->
+<div id="debugContainer">
+<pre id="debug"></pre>
+</div>
+
+<!-- MAKE CANVAS AND OTHER STARTING ELEMENTS  -->
+<center>
+	<br/>
+	<h3 id="scoreboard">Use the arrow buttons to move and jump. Push down arrow before jumping to jump straight up.
+	Push either left or right arrow to jump in the respective direction.  You can boost your jump
+	more by holding/clicking the arrows. Use the spacebar to shoot.</h3>
+	<h3 id="healthboard">Health: 5</h3>
+	<canvas id="canvas" width="800" height="500"></canvas>
+	<audio id="music"><source src="b-summer.mp3"></source></audio>
+	<audio id="jump"><source src="spin_jump.mp3"></source></audio>
+	<audio id="water"><source src="water.mp3"></source></audio>
+	<audio id="shot"><source src="gunShot.mp3"></source></audio>
+	<audio id="enemy"><source src="whack.mp3"></source></audio>
+	<audio id="win"><source src="triumphant.mp3"></source></audio>
+</center>
+
+
+<script>
+//----------------------------------------------------------------------//
+// VARIABLES
+//---------------------------------------------------------------------
+	//
+	var count = 0;
+	//Keeps count of the number of pairs found.
+	var success = 0;
+	var applyGravity = false;
+	var character;
+	var camera;
+	var ground;
+	var charDirection;
+	var charInAir = true;
+	var charJump = false;
+	var attack;
+	var defending = false;
+	var damageCounter = 5;
+	var invulnerability = false;
+	var enemy;
+	var enemyHealth = 3000;
+	var attacking = false;
+	var timer1;
+	var timer2;
+	var timer3;
+	var timer4;
+	
+//----------------------------------------------------------------------//
+// WIN/LOSE CODE
+//----------------------------------------------------------------------//
+	
+	//Called upon winning the game.  Removes abilty to click and reloads.
+	var win = function()
+    {
+		window.removeEventListener("keyDown", onKeyDown);
+		window.location.href = "http:../engine5/stage2.html";
+    }
+	
+	//Reloads the screen to restart the game.
+	var death = function()
+    {
+		var points = document.getElementById("scoreboard");
+		points.innerHTML = "You lost!";
+		var refresh = setTimeout(reload, 2000);
+    }
+	
+	//Reloads the screen to restart the game.
+	var reload = function()
+    {
+		location.reload();
+    }
+	
+	var damage = function()
+	{
+		var music = document.getElementById("enemy");
+		music.play();
+		if(invulnerability == false)
+		{
+			damageCounter--;
+			character.material.color.r  = 1.0;
+			character.material.color.g  = 0.0;
+			character.material.color.b  = 0.0;
+			invulnerability = true;
+			var points = document.getElementById("healthboard");
+			points.innerHTML = "Health: " + damageCounter;
+			
+			if(damageCounter <= 0)
+			{
+				death();
+			}
+			characterInvulnerable();
+		}
+	}
+	
+	var characterInvulnerable = function()
+	{
+		timer1 = setTimeout(characterVulnerable, 3000);
+	}
+	
+	var characterVulnerable = function()
+	{
+		invulnerability = false;
+		character.material.color.r  = 1.0;
+		character.material.color.g  = 0.0;
+		character.material.color.b  = 0.5;
+	}
+	
+//----------------------------------------------------------------------//
+// COLLISION, MOVEMENT, AND ATTACK CODE
+//----------------------------------------------------------------------//
+	
+	//Checks for collisions.
+	var collision = function(character, ground)
+    {
+		//Gets the collision boundaries of the ball and paddle tested.
+		var player = getCollisionBounds(character);
+		//alert("collision!\nrect x: " + rectangle.position.x + "\nrect y: " + rectangle.position.y + "\n\nsphere x min: " + sphere.min.x + "\nsphere y min: " + sphere.min.y);
+        var floor = getCollisionBounds(ground);
+		//If the paddle and ball intersect, the it returns true and an equation in moveBall is used.
+		if(player.intersectsBox(floor)) return true;
+		//If it is not true, moveBall's current speed values are not changed.
+        return false;
+    }
+	
+	//Moves the character left
+	var moveLeft = function(character)
+    {
+		charDirection = -2;
+		character.position.x -= 0.2;
+		character.position.z = 0;
+		character.__dirtyPosition = true;
+		character.position.z = 0;
+		camera.position.x = character.position.x;
+		camera.position.y = character.position.y+4;
+		camera.lookAt(character.position);
+	}
+	//Moves the character right
+	var moveRight = function(character)
+    {
+		charDirection = 2;
+		character.position.x += 0.2;
+		character.position.z = 0;
+		character.__dirtyPosition = true;
+		character.position.z = 0;
+		camera.position.x = character.position.x;
+		camera.position.y = character.position.y+4;
+		camera.lookAt(character.position);
+	}
+	//Characters jumps before falling back.
+	var jump = function(character)
+    {
+		if(charJump) 
+		{
+			canNotJump();
+			var force = new THREE.Vector3(charDirection, 7.5, 0);
+			character.applyCentralImpulse(force);
+		}
+		character.position.z = 0;
+		camera.position.x = character.position.x;
+		camera.position.y = character.position.y+4;
+		var music = document.getElementById("jump");
+		music.play();
+		camera.lookAt(character.position);
+	}
+	
+	var canJump = function() 
+	{
+		charInAir = false;
+		charJump = true;
+	}
+	
+	var canNotJump = function() 
+	{
+		charInAir = true;
+		charJump = false;
+	}
+	
+	var characterAttack = function()
+	{
+		//Add shooting- how to erase objects after set amount of time?
+		defending = true;
+		// shot cubey
+		var shootDir;
+		if (charDirection > 0) 
+		{
+			shootDir = 1;
+		} 
+		else 
+		{
+			shootDir = -1;
+		}
+		
+		attack.position.z = 0;
+		attack.position.y = character.position.y;
+		attack.position.x = character.position.x+(shootDir*1.5);
+		attack.__dirtyPosition = true;
+		
+		var force = new THREE.Vector3(110*shootDir, 0, 0);
+		attack.applyCentralImpulse(force);
+		attack.__dirtyPosition = true;
+		
+		var music = document.getElementById("shot");
+		music.play();
+	}
+	
+//----------------------------------------------------------------------//
+// ENEMY MOVEMENT AND ATTACK CODE
+//----------------------------------------------------------------------//
+	
+	var enemyCombat = function()
+	{
+		setTimeout(function enemyLapse() {
+					   if(enemyHealth > 0) 
+					   {
+						   if (!attacking) 
+						   {
+								enemy1.addEventListener('collision', 
+									   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+										   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+										   if(other_object.name == 'attack')
+										   {
+											console.log("here attacking");
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										   if(other_object.name == 'deathPanel')
+										   {
+											console.log("here attacking");
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										}); 
+								enemy2.addEventListener('collision', 
+									   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+										   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+										   if(other_object.name == 'attack')
+										   {
+											console.log("here attacking");
+											   enemy2.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										   if(other_object.name == 'deathPanel')
+										   {
+											console.log("here attacking");
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										}); 
+								enemy3.addEventListener('collision', 
+									   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+										   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+										   if(other_object.name == 'attack')
+										   {
+												console.log("here attacking");
+											   enemy3.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										   if(other_object.name == 'deathPanel')
+										   {
+											console.log("here attacking");
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										}); 
+								enemy4.addEventListener('collision', 
+									   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+										   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+										   if(other_object.name == 'attack')
+										   {
+												console.log("here attacking");
+											   enemy4.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										   if(other_object.name == 'deathPanel')
+										   {
+											console.log("here attacking");
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										}); 
+								enemy5.addEventListener('collision', 
+									   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+										   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+										   if(other_object.name == 'attack')
+										   {
+												console.log("here attacking");
+											  enemy5.position.z = -20.0;
+											  attack.position.y = -30.0;
+										   }
+										   if(other_object.name == 'deathPanel')
+										   {
+											console.log("here attacking");
+											
+											   enemy1.position.z = -20.0;
+											   attack.position.y = -30.0;
+										   }
+										}); 
+							   setTimeout( ()=> { enemyMovementLeft() }, 1000);
+							   setTimeout( ()=> { enemyMovementLeft() }, 2000);
+							   setTimeout( ()=> { enemyMovementRight() }, 3000);
+							   setTimeout( ()=> { enemyMovementRight() }, 4000);
+							   setTimeout( ()=> { enemyJump() }, 5000);
+						   }
+						   setTimeout(()=> { enemyLapse() }, 5000);
+					   }
+				   }, 5000);
+	}
+	
+	var enemyMovementRight = function()
+	{
+		enemy1.position.x += 0.2;
+		enemy1.position.z = 0;
+		enemy1.__dirtyPosition = true;
+		
+		enemy2.position.x += 0.2;
+		enemy2.position.z = 0;
+		enemy2.__dirtyPosition = true;
+		
+		enemy3.position.x += 0.2;
+		enemy3.position.z = 0;
+		enemy3.__dirtyPosition = true;
+		
+		enemy4.position.x += 0.2;
+		enemy4.position.z = 0;
+		enemy4.__dirtyPosition = true;
+		
+		enemy5.position.x += 0.2;
+		enemy5.position.z = 0;
+		enemy5.__dirtyPosition = true;
+	}
+	
+	var enemyMovementLeft = function()
+	{
+		enemy1.position.x -= 0.2;
+		enemy1.position.z = 0;
+		enemy1.__dirtyPosition = true;
+		
+		enemy2.position.x -= 0.2;
+		enemy2.position.z = 0;
+		enemy2.__dirtyPosition = true;
+		
+		enemy3.position.x -= 0.2;
+		enemy3.position.z = 0;
+		enemy3.__dirtyPosition = true;
+		
+		enemy4.position.x -= 0.2;
+		enemy4.position.z = 0;
+		enemy4.__dirtyPosition = true;
+		
+		enemy5.position.x -= 0.2;
+		enemy5.position.z = 0;
+		enemy5.__dirtyPosition = true;
+	}
+	
+	var enemyJump = function(character)
+    {
+		var force = new THREE.Vector3(0, 2, 0);
+		enemy1.applyCentralImpulse(force);
+		enemy1.__dirtyPosition = true;
+		enemy1.position.z = 0;
+		enemy1.__dirtyPosition = true;
+		
+		enemy2.applyCentralImpulse(force);
+		enemy2.__dirtyPosition = true;
+		enemy2.position.z = 0;
+		enemy2.__dirtyPosition = true;
+		
+		enemy3.applyCentralImpulse(force);
+		enemy3.__dirtyPosition = true;
+		enemy3.position.z = 0;
+		enemy3.__dirtyPosition = true;
+		
+		enemy4.applyCentralImpulse(force);
+		enemy4.__dirtyPosition = true;
+		enemy4.position.z = 0;
+		enemy4.__dirtyPosition = true;
+		
+		enemy5.applyCentralImpulse(force);
+		enemy5.__dirtyPosition = true;
+		enemy5.position.z = 0;
+		enemy5.__dirtyPosition = true;
+	}
+	
+	
+//----------------------------------------------------------------------//
+// THE LOADING AND ANIMATION CODE FOR THE GAME
+//----------------------------------------------------------------------//
+
+	//Holds and helps animate the game objects.
+	var animateGame = function()
+	{
+		//Holds all scene objects.  The sqr variables each hold a cube
+		//to use in randomizeSpheres.
+		var scene = gameState.scene;
+		camera = gameState.camera;
+		character = scene;
+		character = scene.getObjectByName("cubey", true);
+		attack = scene;
+		attack = scene.getObjectByName("attack", true);
+		enemy1 = scene;
+		enemy1 = scene.getObjectByName("enemy1", true);
+		enemy2 = scene;
+		enemy2 = scene.getObjectByName("enemy2", true);
+		enemy3 = scene;
+		enemy3 = scene.getObjectByName("enemy3", true);
+		enemy4 = scene;
+		enemy4 = scene.getObjectByName("enemy4", true);
+		enemy5 = scene;
+		enemy5 = scene.getObjectByName("enemy5", true);
+		
+		character.addEventListener('collision', 
+				   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
+					   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
+					   if(other_object.name == 'floor')
+					   {
+						  canJump();
+					   } 
+					   if(other_object.name == 'wall')
+					   {
+						  //nothing
+					   } 
+					   else if (other_object.name == 'deathpanel')
+					   {
+							var music = document.getElementById("water");
+							music.play();
+							death();
+					   }
+					   else if (other_object.name == 'flag')
+					   {
+							var music = document.getElementById("win");
+							music.play();
+							setTimeout( ()=> { win() }, 1500);
+					   }
+					   else if (other_object.name == 'enemy1')
+					   {
+						  damage();
+					   }
+					   else if (other_object.name == 'enemy2')
+					   {
+						  damage();
+					   }
+					   else if (other_object.name == 'enemy3')
+					   {
+						  damage();
+					   }
+					   else if (other_object.name == 'enemy4')
+					   {
+						  damage();
+					   }
+					   else if (other_object.name == 'enemy5')
+					   {
+						  damage();
+					   }
+				   });
+		gameState.character = character;
+		camera.lookAt(character.position);
+		//character.position.set(0, 0, 0);
+		//character.__dirtyPosition = true;
+		//scene.add(character);
+		ground = scene;
+		ground = scene.getObjectByName("floor", true);
+		gameState.ground = ground;
+		//sqr1 = scene;
+		//sqr1 = scene.getObjectByName("cube1", true);
+		//randomizeSpheres is called to move the spheres to different
+		//positions so the game varies each time.
+		//Count is iterated to keep randomizeSpheres from reoccurring anf startGameLoop starts engine animation.
+		count++;
+		enemyCombat();
+		startGameLoop(character, camera);
+	}
+	//Run as soon as the screen loads to start game.
+	window.onload = function()
+	{
+		// Point Physijs to the multithreading and core physics engine 
+		Physijs.scripts.worker = '../Physijs-master/physijs_worker.js';
+		Physijs.scripts.ammo = '../Physijs-master/ammo.js';
+		// Start engine in full screen mode (really just full browswer)
+		engine.DEBUG = false;
+		//Sets the canvas and controls for the game and starts music.
+		canvas = document.getElementById("canvas");
+		initEngine(canvas);
+		gameState.onKeyDown = onKeyDown;
+		gameState.score = 0;
+		
+		parseScene(objects);
+		var scene = gameState.scene;
+		camera = gameState.camera;
+		character = scene;
+		character = scene.getObjectByName("cubey", true);
+		
+		/*var audio = new THREE.AudioListener();
+		camera.add(audio);
+		var s = new THREE.PositionalAudio(audio);
+		var loadSound = new THREE.AudioLoader();
+		loadSound.load('b-summer.mp3', function(buffer)
+		{
+			s.setBuffer(buffer);
+			s.setLoop(4);
+			s.setRolloffFactor(4);
+			s.play();
+		});
+		
+		character.add(s);*/
+		
+		var music = document.getElementById("music");
+		music.play();
+		
+		animateGame();
+	}
+	
+//----------------------------------------------------------------------//
+// CONTROL SCRIPTS
+//----------------------------------------------------------------------//
+
+	//The onMouseDown make intersected cubes disappear.
+	var onKeyDown = function(event)
+	{
+		if(character.position.y > 10 || character.position.y < -10)
+	    {
+			character.position.x = 0;
+			character.position.y = 0;
+			character.position.z = 0;
+	    }
+		if(event.keyCode == 37)
+		{
+			//Left Movement
+			//character.image = character.leftImage;
+			moveLeft(character);
+			console.log("left move");
+		}
+		if(event.keyCode == 38)
+		{
+			//Jump Movement
+			jump(character)
+			//jump(character);
+			console.log("jump move");
+		}
+		if(event.keyCode == 39)
+		{
+			//Right Movement
+			//character.image = character.rightImage;
+			moveRight(character);
+			console.log("right move");
+		}
+		if(event.keyCode == 40)
+		{
+			//Right Movement
+			//character.image = character.rightImage;
+			charDirection = 0;
+			console.log("down move");
+		}
+		if(event.keyCode == 32)
+		{
+			characterAttack();
+		}
+	}
+	
+</script>
+
+</body>
+</html>

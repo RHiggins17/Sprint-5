@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+
+<!--
+Name: Rachel Higgins
+Class: CS 4183 Video Game Design
+Semester: Fall 2017
+Professor: David Cline
+Assignment: Sprint 5
+Goal: None.  Objects are available to manipulate.
+Credits:
+		N/A
+ -->
+
+<!-- HTML HEAD ELEMENT - DEFINES CSS FOR THE PAGE -->
+<head>
+	<meta charset="utf-8">
+    <style>
+	    body { background-color: #002200; }
+	    h3,p { color: #FFFF00; }
+	    canvas { background-color: #000044; }
+	    #debugContainer { color: #FFFFFF; position: absolute; z-index: 100;}
+    </style>
+    <title>3D Text</title>
+</head>
+
+<!-- ==================================================================== -->
+
+<!-- HTML BODY TAG - DEFINES THE HTML LAYOUT FOR THE PAGE -->
+<body oncontextmenu="return false;">
+
+<!-- INCLUDE SCRIPTS -->
+<script src="../threejs/build/three.js"></script>
+<script src="gameEngine5.js"></script>
+
+<!-- GAME SPECIFIC INCLUDES -->
+<script src="stage1Data.js"></script>
+<script src="stage2Data.js"></script>
+<script src="stage3Data.js"></script>
+<script src="stage4Data.js"></script>
+<script src="congratulations.js"></script>
+
+<!-- DEFINE LEFT DIV TAG - FOR DEBUG PRINTOUTS -->
+<div id="debugContainer">
+<pre id="debug"></pre>
+</div>
+
+<!-- MAKE CANVAS AND OTHER STARTING ELEMENTS  -->
+<center>
+	<br/>
+	<canvas id="canvas" width="800" height="600"></canvas>
+	<h3 id="instructions">Click "A" to scale objects and arrow keys to move the sprite.</h3>
+</center>
+
+
+<script>
+//----------------------------------------------------------------------//
+// THE MAIN VARIABLES AND CODE FOR THE SCENE
+//----------------------------------------------------------------------//
+	//Keep count of number of times objects are selected randomly.
+	//Used to decide when object's size should be changed.
+	var win = 0;
+	
+	//Run when window loads and gets the scene objects for later use.
+	window.onload = function()
+	{
+			// Start engine in full screen mode (really just full browswer)
+			engine.DEBUG = false;
+			//Sets the canvas and controls for the game and starts music.
+			canvas = document.getElementById("canvas");
+			initEngine(canvas);
+			// Parse the scene and start the game loop
+			//parseScene(objects);
+			
+			stageSelect();
+			
+			//Starts animation.
+			//startGameLoop();
+	}
+	
+	var stageSelect = function()
+	{
+		if(win == 0)
+		{
+			window.location.href = "http:../engine5/stage1.html";
+		}
+		if(win == 1)
+		{
+			//window.location.href = "http:../engine5/stage2.html";
+		}
+		if(win == 2)
+		{
+			//window.location.href = "http:../engine5/stage3.html";
+		}
+		if(win == 3)
+		{
+			//window.location.href = "http:../engine5/stage4.html";
+		}
+		if(win > 3)
+		{
+			//Make a congratulations screen. Parse and load it here.
+		}
+	}
+
+</script>
+
+</body>
+</html>
