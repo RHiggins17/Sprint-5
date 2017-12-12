@@ -96,12 +96,6 @@ var objects = {
 			"bumpScale": 0.01,
 			"shininess": 200
 		},
-		"userData": 
-		{ 
-			"scripts": ["rotateScript"],
-			"rotationSpeed": 0.5
-		},
-		
 	},
 
 	{

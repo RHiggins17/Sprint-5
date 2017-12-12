@@ -71,37 +71,39 @@ Credits:
 //----------------------------------------------------------------------//
 // VARIABLES
 //---------------------------------------------------------------------
-	//
-	var count = 0;
-	//Keeps count of the number of pairs found.
-	var success = 0;
-	var applyGravity = false;
+	//Holds the character and camera objects for later use.
 	var character;
 	var camera;
-	var ground;
+	//Determines character's jump direction and whether it is allowed to jump.
 	var charDirection;
 	var charInAir = true;
 	var charJump = false;
+	//Holds the character's attack for firing and whether it is attacking.
 	var attack;
 	var defending = false;
+	//The amount of health the character has and whether it is temporarily invulnerable.
 	var damageCounter = 5;
 	var invulnerability = false;
+	//Holds the enemy and its attack for combat and movement.
 	var enemy;
 	var shot;
+	//The enemy's total health plus whether it is atacking or vulnerable to counterattacks.
 	var enemyHealth = 5;
 	var attacking = false;
 	var vulnerability = false;
+	//Timers are used to delay some actions of the enemy or character.
 	var timer1;
 	var timer2;
 	var timer3;
 	var timer4;
+	//Random generated number determines what pattern the enemy will use to attack.
 	var random;
 	
 //----------------------------------------------------------------------//
 // WIN/LOSE CODE
 //----------------------------------------------------------------------//
 	
-	//Called upon winning the game.  Removes abilty to click and reloads.
+	//Called upon winning the game.  Removes abilty to click and loads the next stage.
 	var win = function()
     {
 		window.removeEventListener("keyDown", onKeyDown);
@@ -122,6 +124,8 @@ Credits:
 		location.reload();
     }
 	
+	//If invulnerabilty is false, it takes a health point from the character,
+	//temporarily makes the it invulnerable and color signals with red.
 	var damage = function()
 	{
 		if(invulnerability == false)
@@ -134,22 +138,22 @@ Credits:
 			var points = document.getElementById("healthboard");
 			points.innerHTML = "Health: " + damageCounter + 
 				", Boss Health: " + enemyHealth;
-			
+			//Reloads if character "dies."
 			if(damageCounter <= 0)
 			{
-				var music = document.getElementById("win");
+				var music = document.getElementById("lose");
 				music.play();
 				setTimeout( ()=> { death() }, 1500);
 			}
 			characterInvulnerable();
 		}
 	}
-	
+	//Character is invulnerable for three seconds.
 	var characterInvulnerable = function()
 	{
 		timer1 = setTimeout(characterVulnerable, 3000);
 	}
-	
+	//Character color is set back to normal and is made vulnerable again.
 	var characterVulnerable = function()
 	{
 		invulnerability = false;
@@ -157,7 +161,7 @@ Credits:
 		character.material.color.g  = 0.0;
 		character.material.color.b  = 0.8;
 	}
-	
+	//If hit, enemy health decreases and stage is won if enemy health is less than 0.
 	var damageEnemy = function()
 	{
 		enemyHealth--;
@@ -177,20 +181,16 @@ Credits:
 // COLLISION, MOVEMENT, AND ATTACK CODE
 //----------------------------------------------------------------------//
 	
-	//Checks for collisions.
+	//Gets the collision boundaries of the two objects and tests for intersection.
 	var collision = function(character, ground)
     {
-		//Gets the collision boundaries of the ball and paddle tested.
 		var player = getCollisionBounds(character);
-		//alert("collision!\nrect x: " + rectangle.position.x + "\nrect y: " + rectangle.position.y + "\n\nsphere x min: " + sphere.min.x + "\nsphere y min: " + sphere.min.y);
         var floor = getCollisionBounds(ground);
-		//If the paddle and ball intersect, the it returns true and an equation in moveBall is used.
 		if(player.intersectsBox(floor)) return true;
-		//If it is not true, moveBall's current speed values are not changed.
         return false;
     }
 	
-	//Moves the character left
+	//Moves the character left and has the camera follow it.
 	var moveLeft = function(character)
     {
 		charDirection = -2;
@@ -201,7 +201,7 @@ Credits:
 		camera.position.y = character.position.y+4;
 		camera.lookAt(character.position);
 	}
-	//Moves the character right
+	//Moves the character right and has the camera follow it.
 	var moveRight = function(character)
     {
 		charDirection = 2;
@@ -212,10 +212,11 @@ Credits:
 		camera.position.y = character.position.y+4;
 		camera.lookAt(character.position);
 	}
-	//Characters jumps before falling back.
+	//Character jumps if in contact with the floor and has the camera follow it.
 	var jump = function(character)
     {
-		if(charJump) {
+		if(charJump) 
+		{
 			canNotJump();
 			var force = new THREE.Vector3(charDirection, 7.5, 0);
 			character.applyCentralImpulse(force);
@@ -227,33 +228,34 @@ Credits:
 		music.play();
 		camera.lookAt(character.position);
 	}
-	
+	//Called whn in contact with a floor and allows character to jump.
 	var canJump = function() 
 	{
 		charInAir = false;
 		charJump = true;
 	}
-	
+	//Called when jumping to prevent double-jumps.
 	var canNotJump = function() 
 	{
 		charInAir = true;
 		charJump = false;
 	}
-	
+	//Character's attack code- determines direction to shoot in, where to shoot from, and applies force to shoot.
 	var characterAttack = function()
 	{
-		//Add shooting- how to erase objects after set amount of time?
 		var scene = gameState.scene;
 		attack = scene;
 		attack = scene.getObjectByName("attack", true);
 		defending = true;
 		
-		// shot cubey
 		var shootDir;
 		
-		if (charDirection > 0) {
+		if (charDirection > 0) 
+		{
 			shootDir = 1;
-		} else {
+		}
+		else 
+		{
 			shootDir = -1;
 		}
 		
@@ -273,7 +275,7 @@ Credits:
 //----------------------------------------------------------------------//
 // ENEMY MOVEMENT AND ATTACK CODE
 //----------------------------------------------------------------------//
-	
+	//Enemy combat loops every seven seconds.  Actions depend on random number generated.
 	var enemyCombat = function()
 	{
 		setTimeout(function enemyLapse() 
@@ -313,7 +315,7 @@ Credits:
 					   }
 		}, 7000);
 	}
-	
+	//Enemy moves in character's movement direction
 	var enemyMovement = function()
 	{
 		if(enemy.position.y > 10 || enemy.position.y < -10)
@@ -326,29 +328,19 @@ Credits:
 		{
 			enemy.position.x -= (0.2);
 			enemy.__dirtyPosition = true;
-			//enemy.position.x = character.position.x;
 		}
 		if(character.position.x > enemy.position.x)
 		{
 			enemy.position.x += (0.2);
 			enemy.__dirtyPosition = true;
-			//enemy.position.x = character.position.x;
 		}
 	}
-	
-	var enemyJump = function(character)
-    {
-		var force = new THREE.Vector3(charDirection, 0, 0);
-		enemy.applyCentralImpulse(force);
-		enemy.position.z = 0;
-	}
-	
+	//Similar to character's attack. Shoots in character's direction from enemy's position.
 	var enemyAttack = function()
 	{
-		//Add shooting- how to erase objects after set amount of time?
 		attacking = true;
 		
-		// shot cubey
+		// shot enemy
 		var shootDir;
 		
 		if (enemy.position.x > character.position.x) 
@@ -372,7 +364,8 @@ Credits:
 		var music = document.getElementById("shot");
 		music.play();
 	}
-	
+	//Boss is made vulnerable (signaled with color change) and can lose health.
+	//If boss has 0 health, character wins.  Else, boss becomes invulnerable again.
 	var enemyVulnerable = function()
 	{
 		timer2 = setTimeout(enemyInvulnerable, 3000);
@@ -398,9 +391,8 @@ Credits:
 		{
 			win();
 		}
-		//timer2 = setTimeout(enemyInvulnerable, 2000);
 	}
-	
+	//Changes enemy color back to normal and starts attack again.
 	var enemyInvulnerable = function()
 	{
 		enemy.material.color.r  = 0.0;
@@ -414,16 +406,19 @@ Credits:
 // THE LOADING AND ANIMATION CODE FOR THE GAME
 //----------------------------------------------------------------------//
 
-	//Holds and helps animate the game objects.
+	//Holds the game objects and starts animation.
 	var animateGame = function()
 	{
-		//Holds all scene objects.  The sqr variables each hold a cube
-		//to use in randomizeSpheres.
+		//Gets the scene and stores the camera, character, boss, and shot objects in variables for later use.
 		var scene = gameState.scene;
+		camera = gameState.camera;
+		character = scene;
+		character = scene.getObjectByName("cubey", true);
 		enemy = scene;
 		enemy = scene.getObjectByName("enemy", true);
 		shot = scene;
 		shot = scene.getObjectByName("shot", true);
+		//Character can respond to collisions in different ways depending on object.
 		character.addEventListener('collision', 
 								   function( other_object, relative_velocity, relative_rotation, contact_normal ) {
 									   // `this` has collided with `other_object` with an impact speed of `relative_velocity` and a rotational force of `relative_rotation` and at normal `contact_normal`
@@ -446,20 +441,10 @@ Credits:
 											damage();
 									   }
 								   });
+		//Sets the engine gameState character to Cubey and camera looks at position.
 		gameState.character = character;
 		camera.lookAt(character.position);
-		//character.position.set(0, 0, 0);
-		//character.__dirtyPosition = true;
-		//scene.add(character);
-		ground = scene;
-		ground = scene.getObjectByName("floor", true);
-		gameState.ground = ground;
-		//sqr1 = scene;
-		//sqr1 = scene.getObjectByName("cube1", true);
-		//randomizeSpheres is called to move the spheres to different
-		//positions so the game varies each time.
-		//Count is iterated to keep randomizeSpheres from reoccurring anf startGameLoop starts engine animation.
-		count++;
+		//Enemy combat and animation starts.
 		enemyCombat();
 		startGameLoop(character, camera);
 	}
@@ -471,20 +456,15 @@ Credits:
 		Physijs.scripts.ammo = '../Physijs-master/ammo.js';
 		// Start engine in full screen mode (really just full browswer)
 		engine.DEBUG = false;
-		//Sets the canvas and controls for the game and starts music.
+		//Sets the canvas and controls for the game, gets objects, and starts music.
 		canvas = document.getElementById("canvas");
 		initEngine(canvas);
 		gameState.onKeyDown = onKeyDown;
-		gameState.score = 0;
-		//var music = document.getElementById("music");
-		//music.play();
-		// Parse the scene and start the game loop
 		parseScene(objects);
-		var scene = gameState.scene;
-		camera = gameState.camera;
-		character = scene;
-		character = scene.getObjectByName("cubey", true);
+		var music = document.getElementById("music");
+		music.play();
 		
+		//Positional audio slows game too much.
 		/*var audio = new THREE.AudioListener();
 		camera.add(audio);
 		var s = new THREE.PositionalAudio(audio);
@@ -498,10 +478,7 @@ Credits:
 		});
 		
 		character.add(s);*/
-		var music = document.getElementById("music");
-		music.play();
-		
-		//Get the scene and its objects, the spheres and two rectangles.
+		//Gets objects and sets event listeners.
 		animateGame();
 	}
 	
@@ -509,7 +486,8 @@ Credits:
 // CONTROL SCRIPTS
 //----------------------------------------------------------------------//
 
-	//The onMouseDown make intersected cubes disappear.
+	//The onKeyDown sets character's position if it falls off the stage.
+	//It also allows, movement, jumping, and attacking responses.
 	var onKeyDown = function(event)
 	{
 		if(character.position.y > 10 || character.position.y < -10)
@@ -522,7 +500,6 @@ Credits:
 		if(event.keyCode == 37)
 		{
 			//Left Movement
-			//character.image = character.leftImage;
 			moveLeft(character);
 			console.log("left move");
 		}
@@ -530,27 +507,24 @@ Credits:
 		{
 			//Jump Movement
 			jump(character)
-			//jump(character);
 			console.log("jump move");
 		}
 		if(event.keyCode == 39)
 		{
 			//Right Movement
-			//character.image = character.rightImage;
 			moveRight(character);
 			console.log("right move");
 		}
 		if(event.keyCode == 40)
 		{
-			//Right Movement
-			//character.image = character.rightImage;
+			//Sets direction to 0 for vertical-only jumps.
 			charDirection = 0;
 			console.log("down move");
 		}
 		if(event.keyCode == 32)
 		{
+			//Character attack called.
 			characterAttack();
-			//enemyCombat();
 		}
 		
 	}
